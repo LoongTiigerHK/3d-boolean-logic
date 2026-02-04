@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 2. 强制深色模式 CSS (解决全白看不清 & 布局优化) ---
+# --- 2. 强制深色模式 CSS ---
 st.markdown("""
     <style>
     .stApp {
@@ -22,7 +22,6 @@ st.markdown("""
     .stMarkdown, p, h1, h2, h3 {
         color: #E0E0E0 !important;
     }
-    /* 隐藏 Plotly 默认工具栏的杂乱项 */
     .modebar {
         display: none !important;
     }
@@ -32,10 +31,7 @@ st.markdown("""
 # --- 3. 绘图核心函数 ---
 def generate_logic_plot(bit_depth, phi, theta, dist):
     fig = go.Figure()
-    
-    # 颜色与字体定义
     colors = {'point': '#FF3131', 'line': '#FFD700', 'plane': '#00FFFF', 'cube': '#FF00FF'}
-    # 优先使用花园明朝
     font_cfg = dict(family="'HanaMinA', 'HanaMinB', 'STKaiti', serif", size=22, color="white")
 
     if bit_depth == 0:
@@ -44,7 +40,6 @@ def generate_logic_plot(bit_depth, phi, theta, dist):
             marker=dict(size=20, color=colors['point'], opacity=0.9),
             text=["太极 (〇)"], textposition="top center", textfont=font_cfg
         ))
-    
     elif bit_depth == 1:
         fig.add_trace(go.Scatter3d(
             x=[1, 2], y=[1.5, 1.5], z=[1.5], mode='lines+markers+text',
@@ -52,7 +47,6 @@ def generate_logic_plot(bit_depth, phi, theta, dist):
             marker=dict(size=14, color=[colors['line'], 'white']),
             text=["陽 (⚊)", "陰 (⚋)"], textposition="top center", textfont=font_cfg
         ))
-
     elif bit_depth == 2:
         fig.add_trace(go.Scatter3d(
             x=[1, 2, 2, 1, 1], y=[1, 1, 2, 2, 1], z=[1.5, 1.5, 1.5, 1.5, 1.5],
@@ -60,9 +54,7 @@ def generate_logic_plot(bit_depth, phi, theta, dist):
             text=["老陽 (⚌)", "少陰 (⚍)", "老陰 (⚏)", "少陽 (⚎)"], 
             textposition="top center", textfont=font_cfg
         ))
-
     elif bit_depth == 3:
-        # 八卦符号及其对应的三维布尔坐标
         labels = ["坤 ☷", "震 ☳", "坎 ☵", "兑 ☱", "巽 ☴", "离 ☲", "艮 ☶", "乾 ☰"]
         pts = [(i,j,k) for k in [1,2] for j in [1,2] for i in [1,2]]
         px, py, pz = zip(*pts)
@@ -71,7 +63,6 @@ def generate_logic_plot(bit_depth, phi, theta, dist):
             marker=dict(size=10, color=colors['cube']),
             text=labels, textposition="top center", textfont=font_cfg
         ))
-        # 绘制立方体棱线
         edges = [([1,2],[1,1],[1,1]), ([1,1],[1,2],[1,1]), ([1,1],[1,1],[1,2]),
                  ([2,2],[1,2],[1,1]), ([2,2],[1,1],[1,2]), ([1,2],[2,2],[1,1]),
                  ([1,1],[2,2],[1,2]), ([1,2],[1,1],[2,2]), ([1,1],[1,2],[2,2]),
@@ -82,7 +73,6 @@ def generate_logic_plot(bit_depth, phi, theta, dist):
                 line=dict(color='rgba(255,255,255,0.2)', width=2), showlegend=False
             ))
 
-    # 计算相机视角 (决定物体在画面中的大小和旋转)
     x_eye = dist * np.sin(np.deg2rad(theta)) * np.cos(np.deg2rad(phi))
     y_eye = dist * np.sin(np.deg2rad(theta)) * np.sin(np.deg2rad(phi))
     z_eye = dist * np.cos(np.deg2rad(theta))
@@ -109,18 +99,32 @@ mode = st.sidebar.radio("模式选择", ["维度演化 (0-3 Bit)", "576 逻辑�
 
 if mode == "维度演化 (0-3 Bit)":
     st.title("🌌 576 Abyss Logic: 维度观测")
-    
-    # 侧边栏参数控制
     dim = st.sidebar.select_slider("比特深度 (Dimension)", options=[0, 1, 2, 3], value=3)
     phi_val = st.sidebar.slider("经向旋转 (Phi)", 0, 360, 45)
     theta_val = st.sidebar.slider("纬向翻转 (Theta)", 0, 180, 60)
-    dist_val = st.sidebar.slider("观测距离 (调节画面大小)", 1.5, 6.0, 3.5) # 增加距离滑块
-
-    # 绘图显示
+    dist_val = st.sidebar.slider("观测距离", 1.5, 6.0, 3.5)
     st.plotly_chart(generate_logic_plot(dim, phi_val, theta_val, dist_val), use_container_width=True)
     
-    # 动态注释
     st.markdown("---")
     explainer = {
         0: "**0-Bit 太极**：逻辑奇点，一切算法的坍缩点。",
         1: "**1-Bit 两仪**：一画开天，确立阴阳对立与数据流动。",
+        2: "**2-Bit 四象**：逻辑平面，反馈循环的诞生。",
+        3: "**3-Bit 八卦**：逻辑立方体，576 阵列的最小功能单元。"
+    }
+    st.info(explainer[dim])
+
+else:
+    st.title("🌀 576 逻辑阵列 (24x24 Matrix)")
+    x, y = np.meshgrid(np.arange(24), np.arange(24))
+    z = np.sin(x/3.5) * np.cos(y/3.5)
+    fig_576 = go.Figure(data=[go.Surface(z=z, colorscale='Magma', showscale=False)])
+    fig_576.update_layout(
+        template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)',
+        scene=dict(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False),
+        margin=dict(l=0, r=0, b=0, t=0), height=800
+    )
+    st.plotly_chart(fig_576, use_container_width=True)
+
+st.sidebar.markdown("---")
+st.sidebar.caption("© 576 Abyss Logic Lab | HanaMin System")
